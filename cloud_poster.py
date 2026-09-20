@@ -231,14 +231,34 @@ def set_status(page_id, status, attempts=4):
 
 
 def github_branch(repo):
+    """Which branch the slide images sit on.
+
+    This is only used to build raw.githubusercontent.com urls, so it must never
+    be the thing that stops a post. GITHUB_BRANCH wins, then the GitHub API,
+    then "main".
+
+    The API is deliberately optional. A cloud session often cannot reach
+    api.github.com unless the repo was granted to it, and that used to kill the
+    run before it read Notion at all. Guessing wrong is safe: verify_public
+    fetches every image url and refuses to publish unless each one returns a
+    real JPEG, so a wrong branch fails closed a few lines later.
+    """
+    configured = (os.environ.get("GITHUB_BRANCH") or "").strip()
+    if configured:
+        return configured
+
     headers = {"Accept": "application/vnd.github+json"}
     token = (os.environ.get("GITHUB_TOKEN") or "").strip()
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    resp = requests.get(f"https://api.github.com/repos/{repo}", headers=headers, timeout=30)
-    if resp.status_code != 200:
-        die(f"cannot read the image repo '{repo}': {resp.status_code} {resp.text[:200]}")
-    return resp.json().get("default_branch", "main")
+    try:
+        resp = requests.get(f"https://api.github.com/repos/{repo}", headers=headers, timeout=30)
+        if resp.status_code == 200:
+            return resp.json().get("default_branch", "main")
+        log(f"  github api says {resp.status_code} for '{repo}', assuming branch 'main'")
+    except Exception as exc:  # noqa: BLE001
+        log(f"  github api unreachable ({exc}), assuming branch 'main'")
+    return "main"
 
 
 def image_urls(repo, branch, slug, count):
