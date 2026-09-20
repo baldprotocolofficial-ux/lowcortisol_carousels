@@ -35,6 +35,9 @@ import requests
 
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
+# Bump this whenever the file changes, so a run says which copy it ran.
+VERSION = "2026-09-20c"
+
 GRAPH_VERSION = os.environ.get("GRAPH_VERSION", "v23.0")
 GRAPH = f"https://graph.facebook.com/{GRAPH_VERSION}"
 
@@ -498,6 +501,11 @@ def main():
     args = ap.parse_args()
 
     load_local_env()
+
+    # Printed first, every run. A cloud session keeps the downloaded copy in
+    # /tmp, so re-running the command without the curl silently runs the old
+    # script. This line says which one actually ran.
+    log(f"cloud_poster version {VERSION}")
 
     token_age_warning()
 
