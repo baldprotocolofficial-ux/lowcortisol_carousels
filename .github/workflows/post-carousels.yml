@@ -1,0 +1,37 @@
+name: Post approved carousels
+
+on:
+  schedule:
+    - cron: "35 * * * *"
+  workflow_dispatch:
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the poster script only
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: cloud_poster.py
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet requests
+
+      - name: Post anything approved and due
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_TOKEN_ISSUED: ${{ secrets.IG_TOKEN_ISSUED }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: |
+          if [ -z "$IG_USER_ID" ] || [ -z "$NOTION_API_KEY" ]; then
+            echo "Secrets are not set yet, so there is nothing to do."
+            exit 0
+          fi
+          export GITHUB_REPO="$GITHUB_REPOSITORY"
+          python cloud_poster.py
